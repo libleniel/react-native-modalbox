@@ -32,8 +32,11 @@ const styles = StyleSheet.create({
   }
 });
 
-const ANIMATION_MODAL_DEFAULT = "DEFAULT"
-const ANIMATION_MODAL_FADE =  "FADE"
+const MODAL_SIZE_FULLSCREEN = "MODAL_SIZE_FULLSCREEN";
+const MODAL_SIZE_AUTO = "MODAL_SIZE_AUTO";
+
+const ANIMATION_MODAL_DEFAULT = "DEFAULT";
+const ANIMATION_MODAL_FADE = "FADE";
 
 export default class ModalBox extends React.PureComponent {
   static propTypes = {
@@ -60,6 +63,7 @@ export default class ModalBox extends React.PureComponent {
     onClosingState: PropTypes.func,
     modalOpacity: PropTypes.number,
     modalAnimationType : PropTypes.string
+    initialModalSize: PropTypes.string,
   };
 
   static defaultProps = {
@@ -79,7 +83,8 @@ export default class ModalBox extends React.PureComponent {
     keyboardTopOffset: Platform.OS == 'ios' ? 22 : 0,
     useNativeDriver: true,
     modalOpacity: 0, 
-    modalAnimationType: "DEFAULT"
+    modalAnimationType: ANIMATION_MODAL_DEFAULT,
+    initialModalSize MODAL_SIZE_AUTO
   };
 
   constructor(props) {
@@ -265,7 +270,7 @@ getModalAnimate({isOpen}) {
           );
         }
         break;
-      case this.ANIMATION_MODAL_FADE:
+      case ANIMATION_MODAL_FADE:
         if(isOpen) {
           animate = Animated.timing(
               this.state.modalOpacity,
@@ -565,12 +570,12 @@ getModalAnimate({isOpen}) {
   }
 
   renderContent() {
-    const size = {
+    const size = this.props.initalModalSize == MODAL_SIZE_FULLSCREEN ? {
       height: this.state.containerHeight,
       width: this.state.containerWidth
-    };
+    } : {} ;
     const offsetX = (this.state.containerWidth - this.state.width) / 2;
-    const modalAnimationStyle = this.props.modalAnimationType  === this.ANIMATION_MODAL_FADE 
+    const modalAnimationStyle = this.props.modalAnimationType  === ANIMATION_MODAL_FADE 
       ? {opacity: this.state.modalOpacity, left: offsetX, top: this.state.positionDest} 
       : {
           transform: [
