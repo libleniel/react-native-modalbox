@@ -1,6 +1,6 @@
 {
   "name": "react-native-modalbox",
-  "version": "2.0.0",
+  "version": "2.0.0-1",
   "description": "A <Modal/> component for react-native",
   "main": "index.js",
   "scripts": {
@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/maxs15/react-native-modalbox#readme",
   "dependencies": {
-    "prop-types": "^15.5.10"
+    "prop-types": "^15.7.2",
+    "react-native-iphone-x-helper" : "1.2.1"
   }
 }

@@ -13,6 +13,7 @@ import {
   Modal,
   Keyboard
 } from 'react-native';
+import { isIphoneX, getStatusBarHeight, getBottomSpace } from 'react-native-iphone-x-helper'
 
 const {height: SCREEN_HEIGHT, width: SCREEN_WIDTH} = Dimensions.get('window');
 const styles = StyleSheet.create({
@@ -109,10 +110,12 @@ export default class ModalBox extends React.PureComponent {
     this.open = this.open.bind(this);
     this.close = this.close.bind(this);
 
+    const screenHeight = SCREEN_HEIGHT - (getStatusBarHeight() + getBottomSpace())
+
     const position = props.startOpen
       ? new Animated.Value(0)
       : new Animated.Value(
-          props.entry === 'top' ? -SCREEN_HEIGHT : SCREEN_HEIGHT
+          props.entry === 'top' ? -screenHeight : screenHeight
         );
     this.state = {
       position,
@@ -122,9 +125,9 @@ export default class ModalBox extends React.PureComponent {
       isAnimateClose: false,
       isAnimateOpen: false,
       swipeToClose: false,
-      height: SCREEN_HEIGHT,
+      height: screenHeight,
       width: SCREEN_WIDTH,
-      containerHeight: SCREEN_HEIGHT,
+      containerHeight: screenHeight,
       containerWidth: SCREEN_WIDTH,
       isInitialized: false,
       keyboardOffset: 0,
