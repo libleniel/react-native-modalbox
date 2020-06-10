@@ -32,6 +32,9 @@ const styles = StyleSheet.create({
   }
 });
 
+const ANIMATION_MODAL_DEFAULT = "DEFAULT"
+const ANIMATION_MODAL_FADE =  "FADE"
+
 export default class ModalBox extends React.PureComponent {
   static propTypes = {
     isOpen: PropTypes.bool,
@@ -54,7 +57,9 @@ export default class ModalBox extends React.PureComponent {
     keyboardTopOffset: PropTypes.number,
     onClosed: PropTypes.func,
     onOpened: PropTypes.func,
-    onClosingState: PropTypes.func
+    onClosingState: PropTypes.func,
+    modalOpacity: PropTypes.number,
+    modalAnimationType : PropTypes.string
   };
 
   static defaultProps = {
@@ -72,7 +77,9 @@ export default class ModalBox extends React.PureComponent {
     easing: Easing.elastic(0.8),
     coverScreen: false,
     keyboardTopOffset: Platform.OS == 'ios' ? 22 : 0,
-    useNativeDriver: true
+    useNativeDriver: true,
+    modalOpacity: 0, 
+    modalAnimationType: "DEFAULT"
   };
 
   constructor(props) {
@@ -105,6 +112,7 @@ export default class ModalBox extends React.PureComponent {
     this.state = {
       position,
       backdropOpacity: new Animated.Value(0),
+      modalOpacity: new Animated.Value(0),
       isOpen: props.startOpen,
       isAnimateClose: false,
       isAnimateOpen: false,
@@ -231,6 +239,58 @@ export default class ModalBox extends React.PureComponent {
     }
   }
 
+getModalAnimate({isOpen}) {
+    var animate = null;
+
+    switch(this.props.modalAnimationType) {
+      case ANIMATION_MODAL_DEFAULT:
+        if(isOpen){
+          animate = Animated.timing(
+              this.state.position,
+              {
+                toValue: this.state.positionDest,
+                duration: this.props.animationDuration,
+                easing: this.props.easing,
+                useNativeDriver: this.props.useNativeDriver
+              }
+          );
+        } else {
+          animate = Animated.timing(
+              this.state.position,
+              {
+                toValue: this.state.containerHeight,
+                duration: this.props.animationDuration,
+                useNativeDriver: this.props.useNativeDriver
+              }
+          );
+        }
+        break;
+      case this.ANIMATION_MODAL_FADE:
+        if(isOpen) {
+          animate = Animated.timing(
+              this.state.modalOpacity,
+              {
+                toValue: 1,
+                duration: this.props.animationDuration,
+                useNativeDriver: this.props.useNativeDriver
+              }
+          );
+        } else {
+          animate = Animated.timing(
+              this.state.modalOpacity,
+              {
+                toValue: 0,
+                duration: this.props.animationDuration,
+                useNativeDriver: this.props.useNativeDriver
+              }
+          );
+        }
+        break;
+    }
+
+    return animate;
+  }
+
   /*
    * Open animation for the modal, will move up
    */
@@ -246,8 +306,9 @@ export default class ModalBox extends React.PureComponent {
         isOpen: true
       },
       () => {
+        /* 
         requestAnimationFrame(() => {
-          // Detecting modal position
+          // Detecting modal position DEFAULT
           let positionDest = this.calculateModalPosition(
             this.state.containerHeight - this.state.keyboardOffset,
             this.state.containerWidth
@@ -271,6 +332,30 @@ export default class ModalBox extends React.PureComponent {
             });
             if (this.props.onOpened) this.props.onOpened();
           });
+        }); 
+        */
+
+        // Detecting modal position CUSTOM BY IRVINGDP
+        let positionDest = this.calculateModalPosition(
+          this.state.containerHeight - this.state.keyboardOffset,
+          this.state.containerWidth
+        );
+
+        if (
+            this.state.keyboardOffset &&
+            positionDest < this.props.keyboardTopOffset
+          ) {
+            positionDest = this.props.keyboardTopOffset;
+          }
+
+        let animOpen = this.getModalAnimate({isOpen:true}).start(() => {
+          this.setState({
+              isAnimateOpen: false,
+              animOpen,
+              positionDest
+            });
+
+          if (this.props.onOpened) this.props.onOpened()
         });
       }
     );
@@ -301,6 +386,7 @@ export default class ModalBox extends React.PureComponent {
         isOpen: false
       },
       () => {
+        /*
         let animClose = Animated.timing(this.state.position, {
           toValue:
             this.props.entry === 'top'
@@ -310,6 +396,8 @@ export default class ModalBox extends React.PureComponent {
           easing: this.props.easing,
           useNativeDriver: this.props.useNativeDriver
         }).start(() => {
+        */
+        let animClose = this.getModalAnimate({isOpen:false}).start(() => {
           // Keyboard.dismiss();   // make this optional. Easily user defined in .onClosed() callback
           this.setState({
             isAnimateClose: false,
@@ -482,6 +570,14 @@ export default class ModalBox extends React.PureComponent {
       width: this.state.containerWidth
     };
     const offsetX = (this.state.containerWidth - this.state.width) / 2;
+    const modalAnimationStyle = this.props.modalAnimationType  === this.ANIMATION_MODAL_FADE 
+      ? {opacity: this.state.modalOpacity, left: offsetX, top: this.state.positionDest} 
+      : {
+          transform: [
+              {translateY: this.state.position},
+              {translateX: offsetX}
+            ]
+        };
 
     return (
       <Animated.View
@@ -490,12 +586,7 @@ export default class ModalBox extends React.PureComponent {
           styles.wrapper,
           size,
           this.props.style,
-          {
-            transform: [
-              {translateY: this.state.position},
-              {translateX: offsetX}
-            ]
-          }
+          modalAnimationStyle
         ]}
         {...this.state.pan.panHandlers}>
         {this.props.children}
