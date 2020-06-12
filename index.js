@@ -63,7 +63,7 @@ export default class ModalBox extends React.PureComponent {
     onOpened: PropTypes.func,
     onClosingState: PropTypes.func,
     modalOpacity: PropTypes.number,
-    modalAnimationType : PropTypes.string
+    modalAnimationType : PropTypes.string,
     initialModalSize: PropTypes.string,
   };
 
@@ -85,7 +85,7 @@ export default class ModalBox extends React.PureComponent {
     useNativeDriver: true,
     modalOpacity: 0, 
     modalAnimationType: ANIMATION_MODAL_DEFAULT,
-    initialModalSize MODAL_SIZE_AUTO
+    initialModalSize: MODAL_SIZE_AUTO
   };
 
   constructor(props) {
