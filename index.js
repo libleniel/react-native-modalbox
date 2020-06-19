@@ -101,7 +101,7 @@ export default class ModalBox extends React.PureComponent {
     this.animateOpen = this.animateOpen.bind(this);
     this.stopAnimateClose = this.stopAnimateClose.bind(this);
     this.animateClose = this.animateClose.bind(this);
-    this.calculateModalPosition = this.calculateModalPosition.bind(this);
+    this.calculateModalPosition = ModalBox.calculateModalPosition;
     this.createPanResponder = this.createPanResponder.bind(this);
     this.onViewLayout = this.onViewLayout.bind(this);
     this.onContainerLayout = this.onContainerLayout.bind(this);
@@ -141,6 +141,24 @@ export default class ModalBox extends React.PureComponent {
         Keyboard.addListener('keyboardDidHide', this.onKeyboardHide)
       ];
     }
+  }
+
+  static getDerivedStateFromProps(props, state) {
+    if (props.height != state.height) {
+        let positionDest = ModalBox.calculateModalPosition(
+          state.containerHeight - state.keyboardOffset,
+          state.containerWidth,
+          props,
+          state
+        );
+
+        return {
+          ...state,
+          positionDest
+        }
+    }
+
+    return null
   }
 
   componentDidMount() {
@@ -346,15 +364,10 @@ getModalAnimate({isOpen}) {
         // Detecting modal position CUSTOM BY IRVINGDP
         let positionDest = this.calculateModalPosition(
           this.state.containerHeight - this.state.keyboardOffset,
-          this.state.containerWidth
+          this.state.containerWidth,
+          this.props,
+          this.state
         );
-
-        if (
-            this.state.keyboardOffset &&
-            positionDest < this.props.keyboardTopOffset
-          ) {
-            positionDest = this.props.keyboardTopOffset;
-          }
 
         let animOpen = this.getModalAnimate({isOpen:true}).start(() => {
           this.setState({
@@ -423,16 +436,25 @@ getModalAnimate({isOpen}) {
   /*
    * Calculate when should be placed the modal
    */
-  calculateModalPosition(containerHeight, containerWidth) {
+  static calculateModalPosition(containerHeight, containerWidth, props, state) {
     let position = 0;
 
-    if (this.props.position == 'bottom') {
-      position = containerHeight - this.state.height;
-    } else if (this.props.position == 'center') {
-      position = containerHeight / 2 - this.state.height / 2;
+    if (props.position == 'bottom') {
+      position = containerHeight - state.height;
+    } else if (props.position == 'center') {
+      position = containerHeight / 2 - state.height / 2;
     }
+
     // Checking if the position >= 0
     if (position < 0) position = 0;
+
+    if (
+      state.keyboardOffset &&
+      positionDest < props.keyboardTopOffset
+    ) {
+      position = props.keyboardTopOffset;
+    }
+
     return position;
   }
 
@@ -508,6 +530,7 @@ getModalAnimate({isOpen}) {
     let newState = {};
     if (height !== this.state.height) newState.height = height;
     if (width !== this.state.width) newState.width = width;
+
     this.setState(newState);
 
     if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
@@ -579,8 +602,11 @@ getModalAnimate({isOpen}) {
     } : {} ;
     const offsetX = (this.state.containerWidth - this.state.width) / 2;
     const modalAnimationStyle = this.props.modalAnimationType  === ANIMATION_MODAL_FADE 
-      ? {opacity: this.state.modalOpacity, left: offsetX, top: this.state.positionDest} 
-      : {
+      ? {
+          opacity: this.state.modalOpacity,
+          left: offsetX, 
+          top: this.state.positionDest
+      } : {
           transform: [
               {translateY: this.state.position},
               {translateX: offsetX}
