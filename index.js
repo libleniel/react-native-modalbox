@@ -81,7 +81,7 @@ export default class ModalBox extends React.PureComponent {
     backButtonClose: false,
     easing: Easing.elastic(0.8),
     coverScreen: false,
-    keyboardTopOffset: Platform.OS == 'ios' ? 22 : 0,
+    keyboardTopOffset: Platform.OS == 'ios' ? 0 : 0,
     useNativeDriver: true,
     modalOpacity: 0, 
     modalAnimationType: ANIMATION_MODAL_DEFAULT,
@@ -110,13 +110,14 @@ export default class ModalBox extends React.PureComponent {
     this.open = this.open.bind(this);
     this.close = this.close.bind(this);
 
-    const screenHeight = SCREEN_HEIGHT - (getStatusBarHeight() + getBottomSpace())
+    const screenHeight = SCREEN_HEIGHT - (getStatusBarHeight(true) + getBottomSpace())
 
     const position = props.startOpen
       ? new Animated.Value(0)
       : new Animated.Value(
           props.entry === 'top' ? -screenHeight : screenHeight
         );
+
     this.state = {
       position,
       backdropOpacity: new Animated.Value(0),
@@ -143,21 +144,51 @@ export default class ModalBox extends React.PureComponent {
     }
   }
 
-  static getDerivedStateFromProps(props, state) {
-    if (props.height != state.height) {
-        let positionDest = ModalBox.calculateModalPosition(
-          state.containerHeight - state.keyboardOffset,
-          state.containerWidth,
-          props,
-          state
-        );
+  static getLatestHeightStyles(props) {
+    if (props && props.style) {
+      var styleHeight = null
 
-        return {
-          ...state,
-          positionDest
+      if (props.style instanceof Array) {  
+        for (let idx in props.style) {
+          let objStyleAtIdx = props.style[idx]
+          
+          if (objStyleAtIdx instanceof Array) {
+            styleHeight = ModalBox.getLatestHeightStyles({style : objStyleAtIdx})
+          } else {
+            styleHeight = objStyleAtIdx.height ? objStyleAtIdx.height : styleHeight
+          }    
         }
+      } else if (props.style.height) {
+        styleHeight = props.style.height
+      }
+
+      return styleHeight
     }
 
+    return null
+  }
+
+  static getDerivedStateFromProps(props, state) {
+    let styleHeight = ModalBox.getLatestHeightStyles(props)
+
+    if (styleHeight) {
+      let positionDest = ModalBox.calculateModalPosition(
+        state.containerHeight - state.keyboardOffset,
+        state.containerWidth,
+        props,
+        state
+      );
+
+      if (Math.floor(styleHeight) != Math.floor(state.height)) {
+        if (props.modalAnimationType == ANIMATION_MODAL_FADE || positionDest != state.positionDest) {
+          return {
+            ...state,
+            positionDest
+          }
+        }
+      }
+    }
+    
     return null
   }
 
@@ -204,7 +235,9 @@ export default class ModalBox extends React.PureComponent {
     if (!evt) return;
     if (!this.state.isOpen) return;
     const keyboardFrame = evt.endCoordinates;
-    const keyboardHeight = this.state.containerHeight - keyboardFrame.screenY;
+    const keyboardHeight = keyboardFrame.screenY == SCREEN_HEIGHT || keyboardFrame.screenY > this.state.containerHeight
+      ? 0
+      : this.state.containerHeight - (keyboardFrame.screenY - getStatusBarHeight(true));
 
     this.setState({keyboardOffset: keyboardHeight}, () => {
       this.animateOpen();
@@ -258,14 +291,14 @@ export default class ModalBox extends React.PureComponent {
   /*
    * Stop opening animation
    */
-  stopAnimateOpen() {
-    if (this.state.isAnimateOpen) {
-      if (this.state.animOpen) this.state.animOpen.stop();
-      this.setState({isAnimateOpen: false});
-    }
+stopAnimateOpen() {
+  if (this.state.isAnimateOpen) {
+    if (this.state.animOpen) this.state.animOpen.stop();
+    this.setState({isAnimateOpen: false});
   }
+}
 
-getModalAnimate({isOpen}) {
+getModalAnimate({isOpen, positionDest}) {
     var animate = null;
 
     switch(this.props.modalAnimationType) {
@@ -274,7 +307,7 @@ getModalAnimate({isOpen}) {
           animate = Animated.timing(
               this.state.position,
               {
-                toValue: this.state.positionDest,
+                toValue: positionDest,
                 duration: this.props.animationDuration,
                 easing: this.props.easing,
                 useNativeDriver: this.props.useNativeDriver
@@ -369,7 +402,7 @@ getModalAnimate({isOpen}) {
           this.state
         );
 
-        let animOpen = this.getModalAnimate({isOpen:true}).start(() => {
+        let animOpen = this.getModalAnimate({isOpen:true, positionDest}).start(() => {
           this.setState({
               isAnimateOpen: false,
               animOpen,
@@ -438,19 +471,22 @@ getModalAnimate({isOpen}) {
    */
   static calculateModalPosition(containerHeight, containerWidth, props, state) {
     let position = 0;
+    
+    let styleHeight = ModalBox.getLatestHeightStyles(props) 
+      ? ModalBox.getLatestHeightStyles(props)
+      : state.height 
 
     if (props.position == 'bottom') {
-      position = containerHeight - state.height;
-    } else if (props.position == 'center') {
-      position = containerHeight / 2 - state.height / 2;
+      position = containerHeight - styleHeight;
+    } else if (props.position == 'center' || props.position == 'top') {
+      position = (containerHeight - styleHeight) / 2;
     }
-
-    // Checking if the position >= 0
+    
     if (position < 0) position = 0;
 
     if (
       state.keyboardOffset &&
-      positionDest < props.keyboardTopOffset
+      position < props.keyboardTopOffset
     ) {
       position = props.keyboardTopOffset;
     }
@@ -528,10 +564,15 @@ getModalAnimate({isOpen}) {
 
     // If the dimensions are still the same we're done
     let newState = {};
+    let isChangedHeight = height !== this.state.height
     if (height !== this.state.height) newState.height = height;
     if (width !== this.state.width) newState.width = width;
 
-    this.setState(newState);
+    this.setState(newState, () => {
+      if (isChangedHeight)
+        this.animateOpen();
+    });
+
 
     if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
   }
@@ -557,6 +598,7 @@ getModalAnimate({isOpen}) {
     }
 
     if (this.props.onLayout) this.props.onLayout(evt);
+
     this.setState({
       isInitialized: true,
       containerHeight: height,
@@ -605,7 +647,7 @@ getModalAnimate({isOpen}) {
       ? {
           opacity: this.state.modalOpacity,
           left: offsetX, 
-          top: this.state.positionDest
+          top: this.state && this.state.positionDest || 0
       } : {
           transform: [
               {translateY: this.state.position},
