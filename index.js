@@ -478,7 +478,7 @@ getModalAnimate({isOpen, positionDest}) {
 
     if (props.position == 'bottom') {
       position = containerHeight - styleHeight;
-    } else if (props.position == 'center' || props.position == 'top') {
+    } else if (props.position == 'center') {
       position = (containerHeight - styleHeight) / 2;
     }
     
