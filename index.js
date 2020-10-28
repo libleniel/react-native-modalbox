@@ -569,8 +569,16 @@ getModalAnimate({isOpen, positionDest}) {
     if (width !== this.state.width) newState.width = width;
 
     this.setState(newState, () => {
-      if (isChangedHeight)
-        this.animateOpen();
+      setTimeout(() => {
+        const isStillVisible =
+          this.state.isOpen ||
+          this.state.isAnimateOpen ||
+          this.state.isAnimateClose;
+
+        if (isChangedHeight && isStillVisible) {          
+          this.animateOpen();
+        }
+      }, this.props.animationDuration + 250)
     });
 
 
