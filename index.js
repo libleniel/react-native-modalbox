@@ -350,6 +350,28 @@ getModalAnimate({isOpen, positionDest}) {
     return animate;
   }
 
+  recalculateModalPosition() {
+    this.setState({
+        isAnimateOpen: true,
+    }, () => {
+        // Detecting modal position CUSTOM BY IRVINGDP
+      let positionDest = ModalBox.calculateModalPosition(
+        this.state.containerHeight - this.state.keyboardOffset,
+        this.state.containerWidth,
+        this.props,
+        this.state
+      );
+
+      let animOpen = this.getModalAnimate({isOpen:true, positionDest}).start(() => {
+        this.setState({
+            isAnimateOpen: false,
+            animOpen,
+            positionDest
+          });
+      });
+    });
+  }
+  
   /*
    * Open animation for the modal, will move up
    */
@@ -395,7 +417,7 @@ getModalAnimate({isOpen, positionDest}) {
         */
 
         // Detecting modal position CUSTOM BY IRVINGDP
-        let positionDest = this.calculateModalPosition(
+        let positionDest = ModalBox.calculateModalPosition(
           this.state.containerHeight - this.state.keyboardOffset,
           this.state.containerWidth,
           this.props,
@@ -569,18 +591,10 @@ getModalAnimate({isOpen, positionDest}) {
     if (width !== this.state.width) newState.width = width;
 
     this.setState(newState, () => {
-      setTimeout(() => {
-        const isStillVisible =
-          this.state.isOpen ||
-          this.state.isAnimateOpen ||
-          this.state.isAnimateClose;
-
-        if (isChangedHeight && isStillVisible) {          
-          this.animateOpen();
+      if(isChangedHeight) {          
+          this.recalculateModalPosition();
         }
-      }, this.props.animationDuration + 250)
     });
-
 
     if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
   }
