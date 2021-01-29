@@ -539,7 +539,7 @@ getModalAnimate({isOpen, positionDest}) {
       return true;
     };
 
-    const animEvt = Animated.event([null, {customY: position}]);
+    const animEvt = Animated.event([null, {customY: position}], {useNativeDriver: false});
 
     const onPanMove = (evt, state) => {
       const newClosingState =
